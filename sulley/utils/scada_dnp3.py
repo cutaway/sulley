@@ -1,9 +1,11 @@
 import math
 import struct
+
+# Requires crcmod: http://crcmod.sourceforge.net/intro.html
 import crcmod
 
-
-########################################################################################################################
+# Update of the original dnp3 function from scada.py. It provided a base, but was not implemented correctly
+# See documentation provided through http://dnp.org. Requires subscription for access to "Document Library."
 def dnp3 (data, control_code="\x44", src=0, dst=0):
     '''Build DNP3 packets that are ready for transmission. Input includes data to send, control code (defaults to slave),
        source address (decimal), and destination address (decimal). Returns a list of packets ready for transmission. 
