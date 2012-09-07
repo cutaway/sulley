@@ -26,11 +26,13 @@ def dnp3 (data, control_code="\x44", src=0, dst=0):
         num_packets = 1
 
     for i in xrange(num_packets):
-        # Packets can only be so big, therefore fragment if necessary
-        slice = data[i*250 : (i+1)*250]
     
         # Transport Layer Fragmentation
         if num_packets > 1:
+            # Packets can only be so big, therefore fragment if necessary
+            # As we will be adding a byte, only grab 249 to make 250
+            sdata = data[i*249 : (i+1)*249]
+
             # Sequence number is always less than 64
             frag_number = i % 64
 
@@ -42,12 +44,17 @@ def dnp3 (data, control_code="\x44", src=0, dst=0):
                 frag_number |= 0x80
 
             # Add it to the front of the slice so it is included and counted as part of the data
-            slice = chr(frag_number) + slice
+            # Extra byte makes slice 250 bytes
+            sdata = chr(frag_number) + sdata
+
+        else:
+            # No need to fragment. Just use all the data.
+            sdata = data
 
         # Build Header
         p  = sync_bytes
         # Length is the header (cntl, dst, src) bytes plus the data length, CRC's from ANY chunk are NOT counted
-        p += chr(len(slice) + len_cntl_dst_src)
+        p += chr(len(sdata) + len_cntl_dst_src)
         p += control_code
         p += struct.pack('<H',dst)
         p += struct.pack('<H',src)
@@ -57,10 +64,10 @@ def dnp3 (data, control_code="\x44", src=0, dst=0):
         p += chksum
 
         # Create packet chunks which are 16 bytes long
-        num_chunks = int(math.ceil(float(len(slice) / 16.0)))
+        num_chunks = int(math.ceil(float(len(sdata) / 16.0)))
 
         for x in xrange(num_chunks):
-            chunk   = slice[x*16 : (x+1)*16]
+            chunk   = sdata[x*16 : (x+1)*16]
             # Add CRC to the end of each fragment, but DO NOT count
             chksum = crc(chunk)
             p      += chunk + chksum
@@ -87,6 +94,8 @@ def print_packet(data):
             if not cnt1:
                 print ""
                 cnt1 = 18
+    print ""
+    print ""
 
 
 # crc16 provided by utils/misc is NOT the correct method for computing the DNP3 CRC.
